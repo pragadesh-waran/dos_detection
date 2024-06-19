@@ -1,0 +1,161 @@
+
+# DoS Detection Script and Demo Attack
+
+## Prerequisites
+1. **Python Environment**
+    - Ensure you have Python installed.
+    - Create a virtual environment and activate it:
+      ```bash
+      virtualenv venv
+      source venv/bin/activate  # On Windows use: venv\Scripts\activate
+      ```
+
+2. **Install Required Packages**
+    - Install the necessary Python packages:
+      ```bash
+      pip install scapy argparse
+      ```
+
+3. **Install hping3**
+    - Install `hping3` tool for generating network traffic:
+      ```bash
+      sudo apt-get install hping3
+      ```
+
+## Saving the DoS Detection Script
+
+1. Open a text editor or IDE and paste the following script:
+    ```python
+    import scapy.all as scapy
+    import argparse
+    from collections import defaultdict
+    import time
+
+    def get_arguments():
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-i', '--interface', dest='interface', help='Network interface to monitor', required=True)
+        parser.add_argument('-t', '--threshold', dest='threshold', type=int, help='Threshold for requests per second', default=100)
+        parser.add_argument('-d', '--duration', dest='duration', type=int, help='Duration to monitor (seconds)', default=60)
+        options = parser.parse_args()
+        return options
+
+    def detect_dos(interface, threshold, duration):
+        ip_counter = defaultdict(int)
+        start_time = time.time()
+
+        def process_packet(packet):
+            if packet.haslayer(scapy.IP):
+                ip = packet[scapy.IP].src
+                ip_counter[ip] += 1
+
+        scapy.sniff(iface=interface, store=False, prn=process_packet, timeout=duration)
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        
+        print(f"\nMonitoring completed. Duration: {elapsed_time:.2f} seconds")
+        
+        for ip, count in ip_counter.items():
+            if count / elapsed_time > threshold:
+                print(f"DoS attack detected from IP: {ip} - Requests per second: {count / elapsed_time:.2f}")
+
+    if __name__ == '__main__':
+        options = get_arguments()
+        print(f"Monitoring on interface {options.interface} for {options.duration} seconds...")
+        detect_dos(options.interface, options.threshold, options.duration)
+    ```
+
+2. Save the file as `dos_detection.py`.
+
+## Running the DoS Detection Script
+
+1. **Navigate to Your Project Directory:**
+    ```bash
+    cd path_to_your_project_directory
+    ```
+
+2. **Activate the Virtual Environment:**
+    - On Unix or MacOS:
+      ```bash
+      source venv/bin/activate
+      ```
+    - On Windows:
+      ```bash
+      venv\Scripts\activate
+      ```
+
+3. **Run the Detection Script:**
+    ```bash
+    python dos_detection.py -i <network_interface> -t <threshold> -d <duration>
+    ```
+    - Replace `<network_interface>` with your network interface (e.g., `eth0`, `wlan0`).
+    - Replace `<threshold>` with the threshold value for requests per second.
+    - Replace `<duration>` with the duration to monitor in seconds.
+
+    Example:
+    ```bash
+    python dos_detection.py -i eth0 -t 50 -d 120
+    ```
+
+## Performing a Demo DoS Attack
+
+1. **Identify Your Target IP and Network Interface:**
+    - Use `ip addr` to find your IP and network interface.
+
+2. **Run the DoS Attack Using hping3:**
+    ```bash
+    sudo hping3 -S -p 80 -i u100 <target_ip>
+    ```
+    - Replace `<target_ip>` with the IP address of your target machine.
+    - `-S` sends TCP SYN packets.
+    - `-p 80` targets port 80.
+    - `-i u100` sets the interval between packets to 100 microseconds.
+
+    Example:
+    ```bash
+    sudo hping3 -S -p 80 -i u100 192.168.1.10
+    ```
+
+## Monitoring and Detecting the Attack
+
+1. **Observe the Output of the Detection Script:**
+    - The script should detect the high rate of requests and print a message indicating a potential DoS attack:
+      ```
+      Monitoring on interface eth0 for 120 seconds...
+      Monitoring completed. Duration: 120.00 seconds
+      DoS attack detected from IP: 192.168.1.10 - Requests per second: 55.67
+      ```
+
+## Error Handling
+
+1. **Common Errors:**
+    - **Permission Denied:**
+      - Ensure you run the sniffing and attack commands with `sudo` privileges.
+
+    - **Interface Not Found:**
+      - Verify the network interface name using `ip addr` or `ifconfig`.
+
+    - **Missing Packages:**
+      - Ensure all required packages are installed in your virtual environment.
+
+    - **Script Not Running:**
+      - Verify the script is saved correctly and the virtual environment is activated.
+
+2. **Troubleshooting Tips:**
+    - **Check Dependencies:**
+      - Ensure `scapy` and `argparse` are installed.
+    
+    - **Validate Arguments:**
+      - Ensure you provide valid network interface, threshold, and duration values.
+
+    - **Network Configuration:**
+      - Verify network configuration and permissions if the script doesn't detect traffic.
+
+## Ethical Considerations
+
+- Only perform DoS attacks in a controlled environment and with permission.
+- Unauthorized DoS attacks are illegal and unethical.
+
+## Conclusion
+
+This documentation provides a step-by-step guide to setting up, running, and monitoring a DoS detection script. It also includes instructions for performing a demo DoS attack using `hping3` in a controlled and ethical manner. Ensure you follow ethical guidelines and conduct tests responsibly.
